@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react'
 import React, { useRef, useState } from 'react'
-import type { Position } from '../util/position'
-import { ZeroPosition } from '../util/position'
+import type { Position } from '../models/position'
+import { ZeroPosition } from '../models/position'
 
 export type DraggableProps = PropsWithChildren & {
   id: string,
@@ -18,7 +18,10 @@ export const Draggable = ({
   const dragOffsetRef = useRef<Position>(ZeroPosition)
 
   const onMouseMove = (event: MouseEvent) => {
-    setPosition({ x: dragOffsetRef.current.x + event.movementX, y: dragOffsetRef.current.y + event.movementY })
+    setPosition({
+      x: event.clientX - dragOffsetRef.current.x,
+      y: event.clientY - dragOffsetRef.current.y
+    })
   }
 
   const onMouseUp = () => {
@@ -29,8 +32,8 @@ export const Draggable = ({
   const onMouseDown = (event: React.MouseEvent) => {
     event.preventDefault()
     const rect = draggableDivRef.current?.getBoundingClientRect()
-    dragOffsetRef.current.x = event.clientX - (rect ? rect.left : 0)
-    dragOffsetRef.current.y = event.clientY - (rect ? rect.top : 0)
+    dragOffsetRef.current.x = rect ? event.clientX - rect.left : 0
+    dragOffsetRef.current.y = rect ? event.clientY - rect.top : 0
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
   }
