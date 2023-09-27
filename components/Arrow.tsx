@@ -22,7 +22,9 @@ export const Arrow = ({
   const controlPointY = startY - curveAmount
 
   return (
-    <svg>
+    <svg
+      className="absolute h-screen w-screen"
+    >
       <path
         d={`M${startX},${startY} Q${controlPointX},${controlPointY} ${endX},${endY}`}
         fill="none"
@@ -40,7 +42,7 @@ export const Arrow = ({
           orient="auto"
           markerUnits="strokeWidth"
         >
-          <polygon points="0 0, 10 3.5, 0 7" fill="black" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="black"/>
         </marker>
       </defs>
     </svg>

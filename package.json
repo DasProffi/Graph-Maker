@@ -16,7 +16,8 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "typescript": "5.1.6",
-    "zod": "3.22.2"
+    "zod": "3.22.2",
+    "@dnd-kit/core": "6.0.8"
   },
   "devDependencies": {
     "@types/js-cookie": "3.0.3",
