@@ -37,12 +37,12 @@ export const Arrow = ({
           id="arrowhead"
           markerWidth="10"
           markerHeight="7"
-          refX="0"
+          refX="10"
           refY="3.5"
           orient="auto"
           markerUnits="strokeWidth"
         >
-          <polygon points="0 0, 10 3.5, 0 7" fill="black"/>
+          <polygon points="0 0, 10 3.5, 0 7" fill="black" />
         </marker>
       </defs>
     </svg>

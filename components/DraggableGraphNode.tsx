@@ -1,8 +1,8 @@
-import type { DraggableProps } from './dnd-kit/Draggable'
-import { Draggable } from './dnd-kit/Draggable'
+import type { DraggableProps } from './dragging utils/Draggable'
+import { Draggable } from './dragging utils/Draggable'
 import React, { useContext } from 'react'
 import { SceneContext } from './Scene'
-import { Port } from '../models/port'
+import { Port } from '../models/Port'
 import { GraphElementType } from '../models/GraphElement'
 
 type DraggablePortProps = {
@@ -27,7 +27,7 @@ const DraggablePort = ({ onClick, port, onMouseOver, onMouseleave }: DraggablePo
     <div
       className={'absolute cursor-pointer bg-red-400' + (isVertical ? ' -translate-x-1/2' : ' -translate-y-1/2')}
       style={portToStyle[port]}
-      onClick={(event) => onClick(event, port)}
+      onMouseDown={(event) => onClick(event, port)}
       onMouseOver={onMouseOver}
       onMouseLeave={onMouseleave}
     >
@@ -50,55 +50,56 @@ export const DraggableGraphNode = ({
 
   const onPortClick = (event: React.MouseEvent, port: Port) => {
     event.stopPropagation()
-    if (!sceneContext.state.selected) {
-      sceneContext.updateContextState({
-        ...sceneContext.state,
-        selected: {
-          id: Math.random().toString(), // TODO change later
-          type: GraphElementType.edge,
-          startNodeId: id,
-          startPort: port,
-          startPosition: { x: event.pageX, y: event.pageY },
-          endNodeId: '',
-          endPort: Port.undefined,
-          endPosition: { x: event.pageX, y: event.pageY },
+    sceneContext.updateContext(context => {
+      if (!context.selected) {
+        return {
+          ...context,
+          selected: {
+            id: Math.random().toString(), // TODO change later
+            type: GraphElementType.edge,
+            startNodeId: id,
+            startPort: port,
+            startPosition: { x: event.pageX, y: event.pageY },
+            endNodeId: '',
+            endPort: Port.undefined,
+            endPosition: { x: event.pageX, y: event.pageY },
+          }
         }
-      })
-    } else {
-      sceneContext.updateContextState({
-        ...sceneContext.state,
-        arrows: [...sceneContext.state.arrows, {
-          ...sceneContext.state.selected,
-          endNodeId: id,
-          endPort: port,
-          endPosition: { x: event.pageX, y: event.pageY },
-        }],
-        selected: undefined,
-      })
-    }
+      } else {
+        return {
+          ...context,
+          arrows: [
+            ...context.arrows,
+            {
+              ...context.selected,
+              endNodeId: id,
+              endPort: port,
+              endPosition: { x: event.pageX, y: event.pageY },
+            },
+          ],
+          selected: undefined,
+        }
+      }
+    })
   }
 
-  const onMouseOver = (port: Port) => sceneContext.updateContextState({ ...sceneContext.state, over: { id, port } })
+  const onMouseOver = (port: Port) => sceneContext.updateContext(context => ({ ...context, over: { id, port } }))
   const onMouseLeave = () => {
-    sceneContext.updateContextState({ ...sceneContext.state, over: undefined })
+    sceneContext.updateContext(context => ({ ...context, over: undefined }))
   }
 
   return (
     <Draggable id={id} {...draggableProps} className="absolute z-50">
-      {(draggableBuilderProps) => (
-        <>
-          {children(draggableBuilderProps)}
-          {[Port.left, Port.right, Port.top, Port.bottom].map(port => (
-            <DraggablePort
-              key={port}
-              onClick={onPortClick}
-              onMouseOver={() => onMouseOver(port)}
-              onMouseleave={onMouseLeave}
-              port={port}
-            />
-          ))}
-        </>
-      )}
+      {children}
+      {[Port.left, Port.right, Port.top, Port.bottom].map(port => (
+        <DraggablePort
+          key={port}
+          onClick={onPortClick}
+          onMouseOver={() => onMouseOver(port)}
+          onMouseleave={onMouseLeave}
+          port={port}
+        />
+      ))}
     </Draggable>
   )
 }

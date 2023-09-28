@@ -1,5 +1,5 @@
-import type { Position } from './position'
-import type { Size } from './size'
+import type { Position } from './Position'
+import type { Size } from './Size'
 import type { GraphElement } from './GraphElement'
 
 export type GraphNode = GraphElement & {
