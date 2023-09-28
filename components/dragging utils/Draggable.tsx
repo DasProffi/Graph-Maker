@@ -3,13 +3,15 @@ import type { Position } from '../../models/Position'
 import { ZeroPosition } from '../../models/Position'
 import type { PropsWithChildren } from 'react'
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { SceneContext } from '../Scene'
+import { GraphContext } from '../Scene'
+import { inBounds } from '../../util/inBounds'
 
 export type DraggableProps = PropsWithChildren & {
   id: string,
   initialPosition?: Position,
   data?: Data,
-  className?: string
+  className?: string,
+  padding?: number
 }
 
 /**
@@ -19,10 +21,11 @@ export const Draggable = ({
   children,
   id,
   initialPosition = ZeroPosition,
-  className
+  className,
+  padding = 0
 }: DraggableProps) => {
   const ref = useRef<HTMLDivElement>(null)
-  const sceneContext = useContext(SceneContext)
+  const sceneContext = useContext(GraphContext)
   const [isDragging, setIsDragging] = useState(false)
   const handleMouseDown = () => {
     setIsDragging(true)
@@ -34,12 +37,15 @@ export const Draggable = ({
 
   const handleMouseMove = useCallback((event: MouseEvent) => {
     if (isDragging) {
-      sceneContext.updateContext(state => {
+      sceneContext.update(state => {
         const currentNode = state.nodes.find(value => value.id === id)
-        const movement = { x: event.movementX, y: event.movementY }
         if (!currentNode) {
           console.log('Node not found', state.nodes, id)
           return state
+        }
+        const movement = {
+          x: inBounds(event.movementX, padding - currentNode.position.x, state.size.width - padding - (ref.current?.offsetWidth ?? 0) - currentNode.position.x),
+          y: inBounds(event.movementY, padding - currentNode.position.y, state.size.height - padding - (ref.current?.offsetHeight ?? 0) - currentNode.position.y)
         }
         return {
           ...state,
@@ -80,7 +86,7 @@ export const Draggable = ({
         }
       })
     }
-  }, [id, isDragging, sceneContext])
+  }, [id, isDragging, padding, sceneContext])
 
   useEffect(() => {
     document.addEventListener('mouseup', handleMouseUp)
@@ -94,6 +100,7 @@ export const Draggable = ({
 
   const handleClick = () => {
     if (!isDragging) {
+      // TODO integrate this properly
       console.log('Component clicked!')
     }
   }

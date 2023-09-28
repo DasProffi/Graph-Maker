@@ -1,3 +1,6 @@
+import { useContext } from 'react'
+import { GraphContext } from './Scene'
+
 export type ArrowProps = {
   startX: number,
   startY: number,
@@ -20,10 +23,12 @@ export const Arrow = ({
   // const distanceY = endY - startY
   const controlPointX = startX + distanceX / 2
   const controlPointY = startY - curveAmount
+  const graphContext = useContext(GraphContext)
 
   return (
     <svg
-      className="absolute h-screen w-screen"
+      className="absolute"
+      style={{ width: graphContext.state.size.width, height: graphContext.state.size.height }}
     >
       <path
         d={`M${startX},${startY} Q${controlPointX},${controlPointY} ${endX},${endY}`}

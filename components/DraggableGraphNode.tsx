@@ -1,18 +1,21 @@
 import type { DraggableProps } from './dragging utils/Draggable'
 import { Draggable } from './dragging utils/Draggable'
-import React, { useContext } from 'react'
-import { SceneContext } from './Scene'
+import React, { useContext, useRef } from 'react'
+import { GraphContext } from './Scene'
 import { Port } from '../models/Port'
 import { GraphElementType } from '../models/GraphElement'
+import type { Position } from '../models/Position'
+
+export const portDistance = 16
 
 type DraggablePortProps = {
-  onClick: (event: React.MouseEvent, port: Port) => void,
+  onClick: (event: React.MouseEvent, port: Port, middlePosition: Position) => void,
   port: Port,
   onMouseOver: (event: React.MouseEvent) => void,
   onMouseleave: (event: React.MouseEvent) => void
 }
 const DraggablePort = ({ onClick, port, onMouseOver, onMouseleave }: DraggablePortProps) => {
-  const portDistance = 16
+  const ref = useRef<HTMLDivElement>(null)
   const isVertical = port === Port.bottom || port === Port.top
 
   const portToStyle = {
@@ -25,9 +28,16 @@ const DraggablePort = ({ onClick, port, onMouseOver, onMouseleave }: DraggablePo
 
   return (
     <div
-      className={'absolute cursor-pointer bg-red-400' + (isVertical ? ' -translate-x-1/2' : ' -translate-y-1/2')}
+      ref={ref}
+      className={'absolute cursor-pointer ' + (isVertical ? ' -translate-x-1/2' : ' -translate-y-1/2')}
       style={portToStyle[port]}
-      onMouseDown={(event) => onClick(event, port)}
+      onMouseDown={(event) => {
+        const boundingRect = ref.current?.getBoundingClientRect()
+        const x = boundingRect?.x ? boundingRect?.x + portDistance / 2 : event.pageX
+        const y = boundingRect?.y ? boundingRect?.y + portDistance / 2 : event.pageY
+        const middlePosition = { x, y }
+        onClick(event, port, middlePosition)
+      }}
       onMouseOver={onMouseOver}
       onMouseLeave={onMouseleave}
     >
@@ -46,11 +56,11 @@ export const DraggableGraphNode = ({
   children,
   ...draggableProps
 }: DraggableWithArrowPortsProps) => {
-  const sceneContext = useContext(SceneContext)
+  const sceneContext = useContext(GraphContext)
 
-  const onPortClick = (event: React.MouseEvent, port: Port) => {
+  const onPortClick = (event: React.MouseEvent, port: Port, middlePosition: Position) => {
     event.stopPropagation()
-    sceneContext.updateContext(context => {
+    sceneContext.update(context => {
       if (!context.selected) {
         return {
           ...context,
@@ -59,10 +69,10 @@ export const DraggableGraphNode = ({
             type: GraphElementType.edge,
             startNodeId: id,
             startPort: port,
-            startPosition: { x: event.pageX, y: event.pageY },
+            startPosition: middlePosition,
             endNodeId: '',
             endPort: Port.undefined,
-            endPosition: { x: event.pageX, y: event.pageY },
+            endPosition: middlePosition,
           }
         }
       } else {
@@ -74,7 +84,7 @@ export const DraggableGraphNode = ({
               ...context.selected,
               endNodeId: id,
               endPort: port,
-              endPosition: { x: event.pageX, y: event.pageY },
+              endPosition: middlePosition,
             },
           ],
           selected: undefined,
@@ -83,13 +93,13 @@ export const DraggableGraphNode = ({
     })
   }
 
-  const onMouseOver = (port: Port) => sceneContext.updateContext(context => ({ ...context, over: { id, port } }))
+  const onMouseOver = (port: Port) => sceneContext.update(context => ({ ...context, over: { id, port } }))
   const onMouseLeave = () => {
-    sceneContext.updateContext(context => ({ ...context, over: undefined }))
+    sceneContext.update(context => ({ ...context, over: undefined }))
   }
 
   return (
-    <Draggable id={id} {...draggableProps} className="absolute z-50">
+    <Draggable id={id} {...draggableProps} className="absolute z-50" padding={portDistance}>
       {children}
       {[Port.left, Port.right, Port.top, Port.bottom].map(port => (
         <DraggablePort
