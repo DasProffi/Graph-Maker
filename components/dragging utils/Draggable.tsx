@@ -40,7 +40,7 @@ export const Draggable = ({
       sceneContext.update(state => {
         const currentNode = state.nodes.find(value => value.id === id)
         if (!currentNode) {
-          console.log('Node not found', state.nodes, id)
+          console.error('Node not found', state.nodes, id)
           return state
         }
         const movement = {
