@@ -2,6 +2,7 @@ import { useContext } from 'react'
 import { GraphContext } from './Graph'
 
 export type ArrowProps = {
+  id: string,
   startX: number,
   startY: number,
   endX: number,
@@ -13,6 +14,7 @@ export type ArrowProps = {
  * Description
  */
 export const Arrow = ({
+  id,
   startX,
   startY,
   endX,
@@ -25,21 +27,31 @@ export const Arrow = ({
   const controlPointY = startY - curveAmount
   const graphContext = useContext(GraphContext)
 
+  const isSelected = graphContext.state.selectedEdgeId === id
+  const selectedColor = 'blue'
+  const normalColor = 'black'
+  const usedColor = isSelected ? selectedColor : normalColor
+
+  const onPathClicked = () => {
+    graphContext.update(prevState => ({
+      ...prevState,
+      selectedEdgeId: id,
+    }))
+  }
+
   return (
-    <svg
-      className="absolute"
-      style={{ width: graphContext.state.size.width, height: graphContext.state.size.height }}
-    >
+    <>
       <path
+        id={`path-${id}`}
         d={`M${startX},${startY} Q${controlPointX},${controlPointY} ${endX},${endY}`}
         fill="none"
-        stroke="black"
+        stroke={usedColor}
         strokeWidth="2"
-        markerEnd="url(#arrowhead)"
+        markerEnd={`url(#path-arrowhead-${id})`}
       />
       <defs>
         <marker
-          id="arrowhead"
+          id={`path-arrowhead-${id}`}
           markerWidth="10"
           markerHeight="7"
           refX="10"
@@ -47,9 +59,16 @@ export const Arrow = ({
           orient="auto"
           markerUnits="strokeWidth"
         >
-          <polygon points="0 0, 10 3.5, 0 7" fill="black" />
+          <polygon points="0 0, 10 3.5, 0 7" fill={usedColor} />
         </marker>
       </defs>
-    </svg>
+      <path
+        d={`M${startX},${startY} Q${controlPointX},${controlPointY} ${endX},${endY}`}
+        fill="none"
+        stroke="transparent"
+        strokeWidth="12"
+        onClick={onPathClicked}
+      />
+    </>
   )
 }

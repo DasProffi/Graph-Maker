@@ -61,10 +61,10 @@ export const DraggableGraphNode = ({
   const onPortClick = (event: React.MouseEvent, port: Port, middlePosition: Position) => {
     event.stopPropagation()
     sceneContext.update(context => {
-      if (!context.selected) {
+      if (!context.creatingEdge) {
         return {
           ...context,
-          selected: {
+          creatingEdge: {
             id: Math.random().toString(), // TODO change later
             type: GraphElementType.edge,
             startNodeId: id,
@@ -81,13 +81,13 @@ export const DraggableGraphNode = ({
           arrows: [
             ...context.arrows,
             {
-              ...context.selected,
+              ...context.creatingEdge,
               endNodeId: id,
               endPort: port,
               endPosition: middlePosition,
             },
           ],
-          selected: undefined,
+          creatingEdge: undefined,
         }
       }
     })

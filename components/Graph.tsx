@@ -13,7 +13,8 @@ import { GraphElementType } from '../models/GraphElement'
 
 export type GraphContextState = {
   size: Size,
-  selected?: VisualGraphEdge,
+  creatingEdge?: VisualGraphEdge,
+  selectedEdgeId?: string,
   over?: { id: string, port: Port },
   arrows: VisualGraphEdge[],
   nodes: GraphNode[]
@@ -43,24 +44,29 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
   const mouseMoveEvent = useCallback((event: MouseEvent) => {
     updateState(context => ({
       ...context,
-      selected: { ...context.selected!, endPosition: { x: event.pageX, y: event.pageY } }
+      creatingEdge: { ...context.creatingEdge!, endPosition: { x: event.pageX, y: event.pageY } }
     }))
   }, [])
 
   const mouseDownEvent = useCallback((event: MouseEvent) => {
     event.stopImmediatePropagation()
-    if (state.selected && state.over) {
+    if (state.creatingEdge && state.over) {
       const arrow: VisualGraphEdge = {
-        ...state.selected,
+        ...state.creatingEdge,
         endNodeId: state.over.id,
         endPort: state.over.port,
         endPosition: { x: event.pageX, y: event.pageY }
       }
-      updateState(context => ({ ...context, arrows: [...context.arrows, arrow], selected: undefined, over: undefined }))
+      updateState(context => ({
+        ...context,
+        arrows: [...context.arrows, arrow],
+        creatingEdge: undefined,
+        over: undefined
+      }))
     } else {
-      updateState(context => ({ ...context, selected: undefined, over: undefined }))
+      updateState(context => ({ ...context, creatingEdge: undefined, over: undefined }))
     }
-  }, [state.over, state.selected])
+  }, [state.over, state.creatingEdge])
 
   const onKeyPress = useCallback((event: KeyboardEvent) => {
     if (event.key.toLowerCase() === 'a') {
@@ -72,17 +78,29 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
           position: mousePosition,
           size: { width: 60, height: 20 },
         }
-        return { ...state, nodes: [...state.nodes, newNode], selected: undefined, over: undefined }
+        return { ...state, nodes: [...state.nodes, newNode], creatingEdge: undefined, over: undefined }
       })
     }
   }, [mousePosition])
+
+  const onKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Delete' && !!state.selectedEdgeId) {
+      updateState(state => {
+        return {
+          ...state,
+          arrows: state.arrows.filter(value => value.id !== state.selectedEdgeId),
+          selectedEdgeId: undefined
+        }
+      })
+    }
+  }, [state.selectedEdgeId])
 
   const mouseMoveTracker = useCallback((event: MouseEvent) => {
     setMousePosition({ x: event.pageX, y: event.pageY })
   }, [])
 
   useEffect(() => {
-    if (state.selected?.id) {
+    if (state.creatingEdge?.id) {
       document.addEventListener('mousemove', mouseMoveEvent)
       document.addEventListener('mousedown', mouseDownEvent)
     }
@@ -91,17 +109,19 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
       document.removeEventListener('mousemove', mouseMoveEvent)
       document.removeEventListener('mousedown', mouseDownEvent)
     }
-  }, [state.selected?.id, mouseDownEvent, mouseMoveEvent, onKeyPress])
+  }, [state.creatingEdge?.id, mouseDownEvent, mouseMoveEvent])
 
   useEffect(() => {
+    document.addEventListener('keydown', onKeyDown)
     document.addEventListener('keypress', onKeyPress)
     document.addEventListener('mousemove', mouseMoveTracker)
 
     return () => {
+      document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('keypress', onKeyPress)
       document.removeEventListener('mousemove', mouseMoveTracker)
     }
-  }, [mouseMoveTracker, onKeyPress])
+  }, [mouseMoveTracker, onKeyPress, onKeyDown])
 
   return (
     <GraphContext.Provider value={{ state, update: updateState }}>
@@ -132,24 +152,21 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
               </div>
             </DraggableGraphNode>
           ))}
-          {state.arrows.map((value, index) => (
-            <Arrow
-              key={`arrows${index}`}
-              startX={value.startPosition.x}
-              startY={value.startPosition.y}
-              endX={value.endPosition.x}
-              endY={value.endPosition.y}
-            />
-          ))}
-          {state.selected && (
-            <Arrow
-              key="selected-arrow"
-              startX={state.selected.startPosition.x}
-              startY={state.selected.startPosition.y}
-              endX={state.selected.endPosition.x}
-              endY={state.selected.endPosition.y}
-            />
-          )}
+          <svg
+            className="absolute"
+            style={{ width: state.size.width, height: state.size.height }}
+          >
+            {(state.creatingEdge ? [...state.arrows, state.creatingEdge] : state.arrows).map((value) => (
+              <Arrow
+                key={value.id}
+                id={value.id}
+                startX={value.startPosition.x}
+                startY={value.startPosition.y}
+                endX={value.endPosition.x}
+                endY={value.endPosition.y}
+              />
+            ))}
+          </svg>
         </div>
       </div>
     </GraphContext.Provider>
