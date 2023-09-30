@@ -1,5 +1,5 @@
-import type { Port } from './port'
-import type { Position } from './position'
+import type { Port } from './Port'
+import type { Position } from './Position'
 import type { GraphElement } from './GraphElement'
 
 export type GraphEdge = GraphElement & {
