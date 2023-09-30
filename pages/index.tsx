@@ -1,12 +1,12 @@
 import React from 'react'
 import type { NextPage } from 'next'
-import { defaultGraphContextState, Scene } from '../components/Scene'
+import { defaultGraphContextState, Graph } from '../components/Graph'
 import { GraphElementType } from '../models/GraphElement'
 
 const Home: NextPage = () => {
   return (
     <div>
-      <Scene
+      <Graph
         initialGraph={{
           ...defaultGraphContextState,
           nodes: [

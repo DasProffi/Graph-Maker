@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { GraphContext } from './Scene'
+import { GraphContext } from './Graph'
 
 export type ArrowProps = {
   startX: number,

@@ -3,7 +3,7 @@ import type { Position } from '../../models/Position'
 import { ZeroPosition } from '../../models/Position'
 import type { PropsWithChildren } from 'react'
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { GraphContext } from '../Scene'
+import { GraphContext } from '../Graph'
 import { inBounds } from '../../util/inBounds'
 
 export type DraggableProps = PropsWithChildren & {
@@ -50,6 +50,19 @@ export const Draggable = ({
         return {
           ...state,
           arrows: state.arrows.map(arrow => {
+            if (arrow.startNodeId === id && arrow.endNodeId === id) {
+              return {
+                ...arrow,
+                startPosition: {
+                  x: arrow.startPosition.x + movement.x,
+                  y: arrow.startPosition.y + movement.y
+                },
+                endPosition: {
+                  x: arrow.endPosition.x + movement.x,
+                  y: arrow.endPosition.y + movement.y
+                }
+              }
+            }
             if (arrow.startNodeId === id) {
               return {
                 ...arrow,
@@ -71,7 +84,6 @@ export const Draggable = ({
             return arrow
           }),
           nodes: state.nodes.map(node => {
-            // TODO error check that current is graph node
             if (node.id === id) {
               return {
                 ...currentNode,

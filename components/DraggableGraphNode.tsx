@@ -1,7 +1,7 @@
 import type { DraggableProps } from './dragging utils/Draggable'
 import { Draggable } from './dragging utils/Draggable'
 import React, { useContext, useRef } from 'react'
-import { GraphContext } from './Scene'
+import { GraphContext } from './Graph'
 import { Port } from '../models/Port'
 import { GraphElementType } from '../models/GraphElement'
 import type { Position } from '../models/Position'
