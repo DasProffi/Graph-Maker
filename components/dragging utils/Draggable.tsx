@@ -85,6 +85,10 @@ export const Draggable = ({
           }),
           nodes: state.nodes.map(node => {
             if (node.id === id) {
+              console.log(node.id, {
+                x: node.position.x + movement.x,
+                y: node.position.y + movement.y
+              })
               return {
                 ...currentNode,
                 position: {

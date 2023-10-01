@@ -66,7 +66,7 @@ export const Arrow = ({
         d={`M${startX},${startY} Q${controlPointX},${controlPointY} ${endX},${endY}`}
         fill="none"
         stroke="transparent"
-        strokeWidth="12"
+        strokeWidth="20"
         onClick={onPathClicked}
       />
     </>

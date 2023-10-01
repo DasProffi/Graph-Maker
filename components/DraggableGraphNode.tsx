@@ -5,8 +5,7 @@ import { GraphContext } from './Graph'
 import { Port } from '../models/Port'
 import { GraphElementType } from '../models/GraphElement'
 import type { Position } from '../models/Position'
-
-export const portDistance = 16
+import { portDistance } from '../config'
 
 type DraggablePortProps = {
   onClick: (event: React.MouseEvent, port: Port, middlePosition: Position) => void,
@@ -16,6 +15,7 @@ type DraggablePortProps = {
 }
 const DraggablePort = ({ onClick, port, onMouseOver, onMouseleave }: DraggablePortProps) => {
   const ref = useRef<HTMLDivElement>(null)
+  const graph = useContext(GraphContext)
   const isVertical = port === Port.bottom || port === Port.top
 
   const portToStyle = {
@@ -33,8 +33,8 @@ const DraggablePort = ({ onClick, port, onMouseOver, onMouseleave }: DraggablePo
       style={portToStyle[port]}
       onMouseDown={(event) => {
         const boundingRect = ref.current?.getBoundingClientRect()
-        const x = boundingRect?.x ? boundingRect?.x + portDistance / 2 : event.pageX
-        const y = boundingRect?.y ? boundingRect?.y + portDistance / 2 : event.pageY
+        const x = boundingRect?.x ? (boundingRect?.x - graph.state.inDocumentPosition.x + graph.state.scrollOffsetPosition.x) + portDistance / 2 : (event.pageX - graph.state.inDocumentPosition.x + graph.state.scrollOffsetPosition.x)
+        const y = boundingRect?.y ? (boundingRect?.y - graph.state.inDocumentPosition.y + graph.state.scrollOffsetPosition.y) + portDistance / 2 : (event.pageY - graph.state.inDocumentPosition.y + graph.state.scrollOffsetPosition.y)
         const middlePosition = { x, y }
         onClick(event, port, middlePosition)
       }}
@@ -60,6 +60,7 @@ export const DraggableGraphNode = ({
 
   const onPortClick = (event: React.MouseEvent, port: Port, middlePosition: Position) => {
     event.stopPropagation()
+    console.log(middlePosition)
     sceneContext.update(context => {
       if (!context.creatingEdge) {
         return {
@@ -99,7 +100,7 @@ export const DraggableGraphNode = ({
   }
 
   return (
-    <Draggable id={id} {...draggableProps} className="absolute z-50" padding={portDistance}>
+    <Draggable key={`draggable-${id}`} id={id} {...draggableProps} className="absolute z-50" padding={portDistance}>
       {children}
       {[Port.left, Port.right, Port.top, Port.bottom].map(port => (
         <DraggablePort

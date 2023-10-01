@@ -12,6 +12,8 @@ import { ZeroPosition } from '../models/Position'
 import { GraphElementType } from '../models/GraphElement'
 
 export type GraphContextState = {
+  inDocumentPosition: Position,
+  scrollOffsetPosition: Position,
   size: Size,
   creatingEdge?: VisualGraphEdge,
   selectedEdgeId?: string,
@@ -20,7 +22,13 @@ export type GraphContextState = {
   nodes: GraphNode[]
 }
 
-export const defaultGraphContextState: GraphContextState = { size: { width: 1000, height: 1000 }, arrows: [], nodes: [] }
+export const defaultGraphContextState: GraphContextState = {
+  inDocumentPosition: ZeroPosition,
+  scrollOffsetPosition: ZeroPosition,
+  size: { width: 10000, height: 10000 },
+  arrows: [],
+  nodes: []
+}
 
 export type GraphContextType = {
   state: GraphContextState,
@@ -38,35 +46,66 @@ export type SceneType = {
 
 export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) => {
   const graphRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const [state, updateState] = useState<GraphContextState>(initialGraph)
   const [mousePosition, setMousePosition] = useState<Position>(ZeroPosition)
+
+  useEffect(() => {
+    if (graphRef.current) {
+      updateState(state => ({
+        ...state,
+        inDocumentPosition: {
+          x: graphRef.current!.getBoundingClientRect().x,
+          y: graphRef.current!.getBoundingClientRect().y
+        }
+      }))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (scrollRef.current?.scrollLeft !== undefined && scrollRef.current?.scrollTop !== undefined) {
+      updateState(state => ({
+        ...state,
+        scrollOffsetPosition: { x: scrollRef.current!.scrollLeft, y: scrollRef.current!.scrollTop }
+      }))
+    }
+  }, [scrollRef.current?.scrollLeft, scrollRef.current?.scrollTop])
 
   const mouseMoveEvent = useCallback((event: MouseEvent) => {
     updateState(context => ({
       ...context,
-      creatingEdge: { ...context.creatingEdge!, endPosition: { x: event.pageX, y: event.pageY } }
+      creatingEdge: {
+        ...context.creatingEdge!,
+        endPosition: {
+          x: event.pageX - context.inDocumentPosition.x + context.scrollOffsetPosition.x,
+          y: event.pageY - context.inDocumentPosition.y + context.scrollOffsetPosition.y,
+        }
+      }
     }))
   }, [])
 
   const mouseDownEvent = useCallback((event: MouseEvent) => {
-    event.stopImmediatePropagation()
-    if (state.creatingEdge && state.over) {
-      const arrow: VisualGraphEdge = {
-        ...state.creatingEdge,
-        endNodeId: state.over.id,
-        endPort: state.over.port,
-        endPosition: { x: event.pageX, y: event.pageY }
+    updateState(state => {
+      if (state.creatingEdge && state.over) {
+        const arrow: VisualGraphEdge = {
+          ...state.creatingEdge!,
+          endNodeId: state.over!.id,
+          endPort: state.over!.port,
+          endPosition: {
+            x: event.pageX - state.inDocumentPosition.x + state.scrollOffsetPosition.x,
+            y: event.pageY - state.inDocumentPosition.y + state.scrollOffsetPosition.y
+          }
+        }
+        return {
+          ...state,
+          arrows: [...state.arrows, arrow],
+          creatingEdge: undefined,
+          over: undefined
+        }
       }
-      updateState(context => ({
-        ...context,
-        arrows: [...context.arrows, arrow],
-        creatingEdge: undefined,
-        over: undefined
-      }))
-    } else {
-      updateState(context => ({ ...context, creatingEdge: undefined, over: undefined }))
-    }
-  }, [state.over, state.creatingEdge])
+      return { ...state, creatingEdge: undefined, over: undefined }
+    })
+  }, [])
 
   const onKeyPress = useCallback((event: KeyboardEvent) => {
     if (event.key.toLowerCase() === 'a') {
@@ -96,8 +135,11 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
   }, [state.selectedEdgeId])
 
   const mouseMoveTracker = useCallback((event: MouseEvent) => {
-    setMousePosition({ x: event.pageX, y: event.pageY })
-  }, [])
+    setMousePosition({
+      x: event.pageX - state.inDocumentPosition.x + state.scrollOffsetPosition.x,
+      y: event.pageY - state.inDocumentPosition.y + state.scrollOffsetPosition.y
+    })
+  }, [state.inDocumentPosition.x, state.inDocumentPosition.y, state.scrollOffsetPosition.x, state.scrollOffsetPosition.y])
 
   useEffect(() => {
     if (state.creatingEdge?.id) {
@@ -125,19 +167,22 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
 
   return (
     <GraphContext.Provider value={{ state, update: updateState }}>
-      <div className="w-full h-screen" autoFocus>
+      <div
+        ref={scrollRef}
+        className="overflow-auto w-full h-full"
+      >
         <div
           ref={graphRef}
-          className="bg-gray-200 border-2 border-black"
+          className="relative bg-gray-200 w-full h-full"
           style={{ width: state.size.width, height: state.size.height }}
         >
           {/* TODO remove below */}
-          <div className="fixed w-full flex flex-row justify-center top-4">
+          <div className="absolute w-full flex flex-row justify-center top-4">
             <div className="px-4 py-2 bg-green-500 rounded-full">
               Press &quot;a&quot; to add a new node
             </div>
           </div>
-          {state.nodes.map((node, index) => (
+          {state.nodes.map((node) => (
             <DraggableGraphNode
               key={node.id}
               id={node.id}
@@ -145,10 +190,10 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
               data={node}
             >
               <div
-                key={`node ${index}`}
+                key={`name-${node.id}`}
                 className="rounded-xl border-2 border-black "
               >
-                {`Name ${index}`}
+                {`${node.id}`}
               </div>
             </DraggableGraphNode>
           ))}
