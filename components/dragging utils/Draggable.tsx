@@ -1,14 +1,12 @@
 import type { Data } from '@dnd-kit/core/dist/store/types'
-import type { Position } from '../../models/Position'
-import { ZeroPosition } from '../../models/Position'
 import type { PropsWithChildren } from 'react'
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { GraphContext } from '../Graph'
 import { inBounds } from '../../util/inBounds'
+import type { GraphNode } from '../../models/GraphNode'
 
 export type DraggableProps = PropsWithChildren & {
-  id: string,
-  initialPosition?: Position,
+  node: GraphNode,
   data?: Data,
   className?: string,
   padding?: number
@@ -17,124 +15,103 @@ export type DraggableProps = PropsWithChildren & {
 /**
  * A Component for the dnd kit draggable
  */
-export const Draggable = ({
+const Draggable = React.memo<DraggableProps>(function Draggable({
   children,
-  id,
-  initialPosition = ZeroPosition,
+  node,
   className,
   padding = 0
-}: DraggableProps) => {
+}: DraggableProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const sceneContext = useContext(GraphContext)
-  const [isDragging, setIsDragging] = useState(false)
-  const handleMouseDown = () => {
-    setIsDragging(true)
-  }
+  const graph = useContext(GraphContext)
+  const [isDragging, setIsDragging] = useState<boolean>(false)
 
-  const handleMouseUp = () => {
+  const handleMouseDown = useCallback(() => {
+    setIsDragging(true)
+    graph.update(state => {
+      state.selectedNode = node
+      return { ...state }
+    })
+  }, [graph, node])
+
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false)
-  }
+    graph.update(state => {
+      state.selectedNode = undefined
+      return { ...state }
+    })
+  }, [graph])
 
   const handleMouseMove = useCallback((event: MouseEvent) => {
     if (isDragging) {
-      sceneContext.update(state => {
-        const currentNode = state.nodes.find(value => value.id === id)
+      graph.update(state => {
+        const currentNode = state.nodes.find(value => value.id === node.id)
         if (!currentNode) {
-          console.error('Node not found', state.nodes, id)
+          console.error('Node not found', state.nodes, node.id)
           return state
         }
         const movement = {
           x: inBounds(event.movementX, padding - currentNode.position.x, state.size.width - padding - (ref.current?.offsetWidth ?? 0) - currentNode.position.x),
           y: inBounds(event.movementY, padding - currentNode.position.y, state.size.height - padding - (ref.current?.offsetHeight ?? 0) - currentNode.position.y)
         }
-        return {
-          ...state,
-          arrows: state.arrows.map(arrow => {
-            if (arrow.startNodeId === id && arrow.endNodeId === id) {
-              return {
-                ...arrow,
-                startPosition: {
-                  x: arrow.startPosition.x + movement.x,
-                  y: arrow.startPosition.y + movement.y
-                },
-                endPosition: {
-                  x: arrow.endPosition.x + movement.x,
-                  y: arrow.endPosition.y + movement.y
-                }
-              }
-            }
-            if (arrow.startNodeId === id) {
-              return {
-                ...arrow,
-                startPosition: {
-                  x: arrow.startPosition.x + movement.x,
-                  y: arrow.startPosition.y + movement.y
-                }
-              }
-            }
-            if (arrow.endNodeId === id) {
-              return {
-                ...arrow,
-                endPosition: {
-                  x: arrow.endPosition.x + movement.x,
-                  y: arrow.endPosition.y + movement.y
-                }
-              }
-            }
-            return arrow
-          }),
-          nodes: state.nodes.map(node => {
-            if (node.id === id) {
-              console.log(node.id, {
-                x: node.position.x + movement.x,
-                y: node.position.y + movement.y
-              })
-              return {
-                ...currentNode,
-                position: {
-                  x: node.position.x + movement.x,
-                  y: node.position.y + movement.y
-                }
-              }
-            }
-            return node
-          })
-        }
+        state.arrows.forEach(arrow => {
+          if (arrow.startNodeId === node.id && arrow.endNodeId === node.id) {
+            arrow.startPosition.x += movement.x
+            arrow.startPosition.y += movement.y
+            arrow.endPosition.x += movement.x
+            arrow.endPosition.y += movement.y
+          }
+          if (arrow.startNodeId === node.id) {
+            arrow.startPosition.x += movement.x
+            arrow.startPosition.y += movement.y
+          }
+          if (arrow.endNodeId === node.id) {
+            arrow.endPosition.x += movement.x
+            arrow.endPosition.y += movement.y
+          }
+        })
+        node.position.x += movement.x
+        node.position.y += movement.y
+        return { ...state }
       })
     }
-  }, [id, isDragging, padding, sceneContext])
+  }, [node, isDragging, padding, graph])
 
   useEffect(() => {
-    document.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('mousemove', handleMouseMove)
+    if (isDragging) {
+      document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('mousemove', handleMouseMove)
+    }
 
     return () => {
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('mousemove', handleMouseMove)
     }
-  }, [handleMouseMove])
+  }, [handleMouseMove, handleMouseUp, isDragging])
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (!isDragging) {
       // TODO integrate this properly
-      console.log('Component clicked!')
+      console.info('Component clicked!')
     }
-  }
-
-  const style = {
-    left: initialPosition.x,
-    top: initialPosition.y,
-  }
+  }, [isDragging])
 
   return (
     <div
       ref={ref}
-      style={style}
-      className={'select-none ' + className}
+      style={{ transform: `translate(${node.position?.x ?? 0}px,${node.position?.y}px)` }}
+      className={'absolute select-none ' + className}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
       {children}
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  return (
+    nextProps.node.position.x === prevProps.node.position.x &&
+    nextProps.node.position.y === prevProps.node.position.y &&
+    nextProps.data === prevProps.data
+  )
+})
+
+export default Draggable

@@ -17,6 +17,7 @@ export type GraphContextState = {
   size: Size,
   creatingEdge?: VisualGraphEdge,
   selectedEdgeId?: string,
+  selectedNode?: GraphNode,
   over?: { id: string, port: Port },
   arrows: VisualGraphEdge[],
   nodes: GraphNode[]
@@ -52,36 +53,33 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
 
   useEffect(() => {
     if (graphRef.current) {
-      updateState(state => ({
-        ...state,
-        inDocumentPosition: {
+      updateState(state => {
+        state.inDocumentPosition = {
           x: graphRef.current!.getBoundingClientRect().x,
           y: graphRef.current!.getBoundingClientRect().y
         }
-      }))
+        return { ...state }
+      })
     }
   }, [])
 
   useEffect(() => {
     if (scrollRef.current?.scrollLeft !== undefined && scrollRef.current?.scrollTop !== undefined) {
-      updateState(state => ({
-        ...state,
-        scrollOffsetPosition: { x: scrollRef.current!.scrollLeft, y: scrollRef.current!.scrollTop }
-      }))
+      updateState(state => {
+        state.scrollOffsetPosition = { x: scrollRef.current!.scrollLeft, y: scrollRef.current!.scrollTop }
+        return { ...state }
+      })
     }
   }, [scrollRef.current?.scrollLeft, scrollRef.current?.scrollTop])
 
   const mouseMoveEvent = useCallback((event: MouseEvent) => {
-    updateState(context => ({
-      ...context,
-      creatingEdge: {
-        ...context.creatingEdge!,
-        endPosition: {
-          x: event.pageX - context.inDocumentPosition.x + context.scrollOffsetPosition.x,
-          y: event.pageY - context.inDocumentPosition.y + context.scrollOffsetPosition.y,
-        }
+    updateState(state => {
+      state.creatingEdge!.endPosition = {
+        x: event.pageX - state.inDocumentPosition.x + state.scrollOffsetPosition.x,
+        y: event.pageY - state.inDocumentPosition.y + state.scrollOffsetPosition.y,
       }
-    }))
+      return { ...state }
+    })
   }, [])
 
   const mouseDownEvent = useCallback((event: MouseEvent) => {
@@ -96,12 +94,7 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
             y: event.pageY - state.inDocumentPosition.y + state.scrollOffsetPosition.y
           }
         }
-        return {
-          ...state,
-          arrows: [...state.arrows, arrow],
-          creatingEdge: undefined,
-          over: undefined
-        }
+        state.arrows.push(arrow)
       }
       return { ...state, creatingEdge: undefined, over: undefined }
     })
@@ -117,7 +110,8 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
           position: mousePosition,
           size: { width: 60, height: 20 },
         }
-        return { ...state, nodes: [...state.nodes, newNode], creatingEdge: undefined, over: undefined }
+        state.nodes.push(newNode)
+        return { ...state, creatingEdge: undefined, over: undefined }
       })
     }
   }, [mousePosition])
@@ -185,8 +179,7 @@ export const Graph = ({ initialGraph = defaultGraphContextState }: SceneType) =>
           {state.nodes.map((node) => (
             <DraggableGraphNode
               key={node.id}
-              id={node.id}
-              initialPosition={node.position}
+              node={node}
               data={node}
             >
               <div

@@ -13,7 +13,7 @@ const Home: NextPage = () => {
     { id: 'node2', type: GraphElementType.node, position: { x: 600, y: 300 }, size: { width: 160, height: 40 } }
   ]
 
-  const limitTestNodes = Array.from({ length: 200 }, (_, i) => {
+  const limitTestNodes = Array.from({ length: 500 }, (_, i) => {
     const width = 160
     const height = 40
 
